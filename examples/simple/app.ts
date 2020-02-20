@@ -20,7 +20,7 @@ let app = new Vue({
         abortUpload(hash) {
             if (this.uploadFile) {
                 // alert(hash)
-                this.uploadFile.remove(hash)
+                this.uploadFile.abort(hash)
             }
         },
         submitUpload() {
@@ -69,7 +69,7 @@ let app = new Vue({
                         }
                         return
                     })
-                    console.log('onProgress=======')
+                    console.log('=============onProgress=============')
                     console.log(data.percent + '%')
                 },
                 onSuccess(res, fileData, file) {
@@ -98,15 +98,18 @@ let app = new Vue({
                     console.log(sliceFile)
                     console.log('file=====')
                     console.log(file)
+                },
+                onBeforeSliceFileUpload(data) {
+                    console.log('=============onBeforeSliceFileUpload=============')
+                    console.log(data)
+                    return new Promise(resolve => {
+                        resolve(true)
+                    })
                 }
-                // onBeforeSliceFileUpload(data) {
-                //     return new Promise(resolve => {
-                //         resolve(false)
-                //     })
-                // }
             })
+            // this.uploadFile.disabled()
+            // this.uploadFile.disabled(false)
         })
-
         // let btn: HTMLLIElement = document.querySelector('#btn')
         // btn.onclick = function () {
         //     up.submit()

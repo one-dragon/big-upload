@@ -1,5 +1,6 @@
 
 import { UploadConfig } from './types'
+import xhr from './core/xhr'
 
 const defaults: UploadConfig = {
     name: 'file',
@@ -8,7 +9,15 @@ const defaults: UploadConfig = {
 
     multiple: false,
 
-    autoUpload: true
+    autoUpload: true,
+
+    withCredentials: false,
+
+    headers: {},
+    
+    timeout: 0,
+
+    httpRequest: xhr
 }
 
 export default defaults

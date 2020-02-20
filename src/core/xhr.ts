@@ -1,8 +1,8 @@
 
 
-import { UploadConfig, UploadRequestData, UploadResponse, UploadPromise, ProgressData } from '../types'
-import { parseResponseHeaders, parseResponseData } from '../util/response'
-import { createError } from '../util/error'
+import { UploadConfig, UploadRequestData, UploadResponse, UploadPromise, UploadProgressData } from '../types'
+import { parseResponseHeaders, parseResponseData } from '../helpers/response'
+import { createError } from '../helpers/error'
 
 export default function xhr(config: UploadConfig, file: File): UploadPromise | any {
     if(typeof XMLHttpRequest === 'undefined') {
@@ -11,7 +11,7 @@ export default function xhr(config: UploadConfig, file: File): UploadPromise | a
 
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest()
-        const { action, timeout } = config
+        const { action, withCredentials, headers, timeout } = config
 
         let hash = config.data.hash
         abortRequest()
@@ -19,7 +19,8 @@ export default function xhr(config: UploadConfig, file: File): UploadPromise | a
         if (xhr.upload) {
             xhr.upload.onprogress = function onprogress(ev: ProgressEvent<EventTarget>) {
                 if(abortRequest()) return
-                let pro = {} as ProgressData
+
+                let pro = {} as UploadProgressData
                 for(let key in data) {
                     pro[key] = data[key]
                 }
@@ -67,21 +68,25 @@ export default function xhr(config: UploadConfig, file: File): UploadPromise | a
 
         xhr.open('POST', action!, true)
 
-        // if (option.withCredentials && 'withCredentials' in xhr) {
-        //     xhr.withCredentials = true;
-        // }
+        if (withCredentials && 'withCredentials' in xhr) {
+            xhr.withCredentials = true;
+        }
 
-        // const headers = option.headers || {};
+        for (let item in headers) {
+            if (headers.hasOwnProperty(item) && headers[item] !== null) {
+                xhr.setRequestHeader(item, headers[item]);
+            }
+        }
 
-        // for (let item in headers) {
-        //     if (headers.hasOwnProperty(item) && headers[item] !== null) {
-        //         xhr.setRequestHeader(item, headers[item]);
-        //     }
-        // }
+        if (timeout) {
+            xhr.timeout = timeout
+        }
+
         xhr.send(formData)
 
+
         function abortRequest() {
-            if (config._removeFile && config._removeFile[hash]) {
+            if (config._abortFile && config._abortFile[hash]) {
                 // alert(111)
                 xhr.abort()
                 return true

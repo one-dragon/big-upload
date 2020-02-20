@@ -1,13 +1,14 @@
 
 import SparkMD5 from 'spark-md5'
-import xhr from './xhr'
-import { UploadConfig, UploadRequestData, UploadResponse, UploadError, ProgressData } from '../types'
-import { warn } from '../util/error'
-import { isBlob, isFile, deepMerge } from '../util/util'
+import { UploadConfig, UploadRequestData, UploadResponse, UploadError, UploadProgressData, UploadParamsData } from '../types'
+import { warn } from '../helpers/error'
+import { isBlob, isFile, deepMerge, isPlainObject } from '../helpers/util'
+
+
 
 function addProgressComputed(config: UploadConfig) { // 增加分片文件的进度计算
     const data = Object.create(null)
-    config._singleFileProgress = (pro: ProgressData, isUploadComplete?: boolean) => {
+    config._singleFileProgress = (pro: UploadProgressData, isUploadComplete?: boolean) => {
         if (isUploadComplete) {
             delete data[pro.hash]
             return 
@@ -49,6 +50,8 @@ export default function postFiles(config: UploadConfig) {
         name: fieldName,
         multiple,
         autoUpload,
+        httpRequest,
+
         onChange,
         onBeforeUpload,
         onBeforeSliceFileUpload,
@@ -63,22 +66,20 @@ export default function postFiles(config: UploadConfig) {
     el.addEventListener('change', async (ev: Event) => {
         const files: FileList | null = (ev.target as HTMLInputElement).files
         if (!files) return
-        fileList = files
 
         if (onChange) {
-            const fileDataList = []
+            const fileDataList: UploadRequestData[] = []
             for(let i = 0; i < files.length; i++) {
-                const file = Array.prototype.slice.call(files)[i]
-                const { name, size } = file
-                const chunkCount = Math.ceil(size / chunkSize!)
-                const hash = await getHash(file, name)
-                fileDataList.push({ name, size, chunkCount, hash, file })
+                let d: UploadParamsData = await genUploadParamsData(Array.prototype.slice.call(files)[i])
+                fileDataList.push(d)
             }
             onChange(fileDataList)
         }
 
         if (autoUpload) {
             uploadFiles(files)
+        }else {
+            fileList = files
         }
     })
 
@@ -91,15 +92,22 @@ export default function postFiles(config: UploadConfig) {
                 // alert('没选择文件')
             }
         },
-        async remove(val: File | string) {
+        async abort(val: File | string) {
             if(isBlob(val) || isFile(val)) {
                 val = await getHash(val, val.name || '')
             }
 
-            if (!config._removeFile) {
-                config._removeFile = {}
+            if (!config._abortFile) {
+                config._abortFile = {}
             }
-            config._removeFile[val] = true
+            config._abortFile[val] = true
+        },
+        disabled(val?: boolean) {
+            if(val === false) {
+                el.removeAttribute('disabled')
+            }else {
+                el.setAttribute('disabled', 'disabled')
+            }
         }
     }
 
@@ -141,7 +149,8 @@ export default function postFiles(config: UploadConfig) {
         }
 
         // 上传文件之前钩子处理
-        const before = onBeforeUpload(file)
+        let d = await genUploadParamsData(file)
+        const before = onBeforeUpload(d)
         if (before && (before as Promise<any>).then) {
             return (before as Promise<any>).then((processedFile: any) => {
                 if (isFile(processedFile) || isBlob(processedFile)) {
@@ -197,32 +206,27 @@ export default function postFiles(config: UploadConfig) {
                     return Promise.reject(err)
                 })
             )
-            // console.log(data)
         }
 
-        return Promise.all(xhrPromiseList).then((...args) => {
+        return Promise.all(xhrPromiseList).then(async (...args) => {
             // console.log('单个文件分片全部请求完成')
             // console.log(args)
             config._singleFileProgress(config.data, true)
-            let d = {
-                name: name,
-                totalCount: chunkCount,
-                size: size,
-                hash: fileHash
-            }
+            const d: UploadParamsData = await genUploadParamsData(file)
             onSuccess && onSuccess(args[0], d, file)
             // return args[0]
             return [args[0], d, file]
         })
     }
 
-    function post(config: UploadConfig, file: File): any { // 上传单个分片文件前，判断钩子函数后上传
+    async function post(config: UploadConfig, file: File): Promise<any> { // 上传单个分片文件前，判断钩子函数后上传
         if (!onBeforeSliceFileUpload) {
-            return xhr(config, file)
+            return httpRequest(config, file)
         }
 
         // 上传分片文件之前钩子处理
-        const before = onBeforeSliceFileUpload(config.data)
+        const d: UploadParamsData = await genUploadParamsData(config.data, file)
+        const before = onBeforeSliceFileUpload(d)
         if (before && (before as Promise<any>).then) {
             return (before as Promise<any>).then(async (processedFile: any) => {
                 if (isFile(processedFile) || isBlob(processedFile)) {
@@ -231,26 +235,49 @@ export default function postFiles(config: UploadConfig) {
                         processedFile = new Blob([arrayBuffer])
                     }
                     config.data[fieldName!] = processedFile
-                    return xhr(config, file)
+                    return httpRequest(config, file)
                 } else {
                     if (processedFile) {
-                        return xhr(config, file)
+                        return httpRequest(config, file)
                     }else {
                         progressCall()
                     }
                 }
             })
         } else if (before !== false) {
-            return xhr(config, file)
+            return httpRequest(config, file)
         } else {
             progressCall()
         }
 
         function progressCall() {
             const { name, index, totalCount, size, currentSize, hash, currentHash } = config.data
-            let d: ProgressData = { name, index, totalCount, size, currentSize, hash, currentHash, loaded: currentSize, total: currentSize, file, currentFile: config.data[fieldName!] }
+            let d: UploadProgressData = { name, index, totalCount, size, currentSize, hash, currentHash, loaded: currentSize, total: currentSize, file, currentFile: config.data[fieldName!] }
             config._singleFileProgress(d)
         }
+    }
+
+    // 生成 UploadParamsData 格式数据
+    function genUploadParamsData(data: any, file?: File): Promise<UploadParamsData> {
+        // file、currentFile、hash、currentHash、size、currentSize、index、name、totalCount
+        return new Promise(async (resolve, reject) => {
+            if (isFile(data)) {
+                file = data
+                const { name, size } = file
+                const totalCount = Math.ceil(size / chunkSize!)
+                const hash = await getHash(file, name)
+                resolve({ name, totalCount, hash, size, file })
+            }else {
+                if (isPlainObject(data) && file) {
+                    const { name, index, totalCount, currentSize, size, currentHash, hash } = data as UploadRequestData
+                    const d: UploadParamsData = { name, index, totalCount, currentHash, hash, currentSize, size, file }
+                    d.currentFile = data[fieldName!]
+                    resolve(d)
+                    return
+                }
+                reject('error')
+            }
+        })
     }
 }
 

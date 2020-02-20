@@ -9,13 +9,17 @@ export interface UploadConfig {
     multiple?: boolean
     accept?: string
     autoUpload?: boolean
+    withCredentials?: boolean
+    headers?: any
+    timeout?: number
+    httpRequest?: any
 
-    onChange?: (fileData: UploadRequestData[]) => any
-    onBeforeUpload?: (file: File) => boolean | Promise<any>
-    onBeforeSliceFileUpload?: (data: UploadRequestData) => boolean | Promise<any>
-    onProgress?: (data: ProgressData) => any
-    onSuccess?: (response: UploadResponse[], fileData: UploadRequestData, file: File) => any
-    onComplete?: (responseList: UploadResponse[][], fileDataList: UploadRequestData[], fileList: File[]) => any
+    onChange?: (fileData: UploadParamsData[]) => any
+    onBeforeUpload?: (fileData: UploadParamsData) => boolean | Promise<any>
+    onBeforeSliceFileUpload?: (fileData: UploadParamsData) => boolean | Promise<any>
+    onProgress?: (data: UploadProgressData) => any
+    onSuccess?: (response: UploadResponse[], fileData: UploadParamsData, file: File) => any
+    onComplete?: (responseList: UploadResponse[][], fileDataList: UploadParamsData[], fileList: File[]) => any
     onError?: (err: UploadError, sliceFile: File | Blob, file: File) => any
 
     [propName: string]: any
@@ -28,6 +32,16 @@ export interface Upload {
 export interface UploadInstance extends Upload {
     (config: UploadConfig): any
     (el: any, action?: any, config?: UploadConfig): any
+}
+
+export interface UploadStatic extends UploadInstance {
+    create(config?: UploadRequestData): UploadInstance
+}
+
+export interface UploadCallReturnFn {
+    submit(): any
+    abort(val: File | string): any
+    disabled(): any
 }
 
 export interface UploadRequestData {
@@ -65,7 +79,12 @@ export interface UploadError extends Error {
     response?: UploadResponse
 }
 
-export interface ProgressData extends UploadRequestData {
+export interface UploadParamsData extends UploadRequestData {
+    file?: File
+    currentFile?: File | Blob
+}
+
+export interface UploadProgressData extends UploadRequestData {
     percent?: number
     loaded: number
     total: number

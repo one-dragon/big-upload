@@ -1,8 +1,8 @@
 
 import { UploadConfig } from '../types'
-import { transformEl } from '../util/el'
-import { transformRequestURL, transformRequestData } from '../util/request'
-import { processAttrs } from '../util/attrs'
+import { transformEl } from '../helpers/el'
+import { transformRequestURL, transformRequestData } from '../helpers/request'
+import { processAttrs } from '../helpers/attrs'
 import postFiles from '../core/postFiles'
 
 export default function dispatchUpload(config: UploadConfig) {
