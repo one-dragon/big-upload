@@ -4,12 +4,11 @@ import { warn } from './error'
 import { makeMap } from './util'
 
 export function transformEl(config: UploadConfig): Element {
-    let el: Element = queryEl(config.el)
+    let el: Element = queryEl(config.el!)
     if (isFileInput(el)) {
         return el
     }else {
         const inputEL: Element = createElement('input')
-        inputEL.setAttribute('type', 'file')
         if (isUnaryTag(el.tagName)) {
             // insertBefore(el.parentNode!, inputEL, el)
             insertBefore(el.parentNode!, inputEL, null)

@@ -1,14 +1,19 @@
 
-import { UploadConfig } from './types'
-import { transformEl } from './util/el'
-import { uploadFile } from './core/uploadFile'
 
-export function upload(config: UploadConfig) {
-    processConfig(config)
-    uploadFile(config)
-}
+import Upload from './core/Upload'
+import defaults from './defaults'
+import { extend } from './util/util'
+import { UploadInstance, UploadConfig } from './types'
 
-function processConfig(config: UploadConfig): void{
-    config.el = transformEl(config)
+function createInstance(config: UploadConfig): UploadInstance {
+    const context = new Upload(config)
+    const instance = Upload.prototype.request.bind(context)
+
+    extend(instance, context)
     
+    return instance as UploadInstance
 }
+
+const upload = createInstance(defaults)
+
+export default upload

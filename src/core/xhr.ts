@@ -1,45 +1,71 @@
 
 
-import { UploadConfig, UploadRequestData, UploadResponse } from '../types'
+import { UploadConfig, UploadRequestData, UploadResponse, UploadPromise, ProgressData } from '../types'
 import { parseResponseHeaders, parseResponseData } from '../util/response'
+import { createError } from '../util/error'
 
-export default function xhr(config: UploadConfig, data: UploadRequestData): Promise<any> | void {
+export default function xhr(config: UploadConfig, file: File): UploadPromise | any {
     if(typeof XMLHttpRequest === 'undefined') {
         return
     }
-    return new Promise(resolve => {
-        const xhr = new XMLHttpRequest()
-        const { action } = config
 
-        /*
-            if (xhr.upload) {
-                xhr.upload.onprogress = function progress(e) {
-                if (e.total > 0) {
-                    e.percent = e.loaded / e.total * 100
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        const { action, timeout } = config
+
+        let hash = config.data.hash
+        abortRequest()
+
+        if (xhr.upload) {
+            xhr.upload.onprogress = function onprogress(ev: ProgressEvent<EventTarget>) {
+                if(abortRequest()) return
+                let pro = {} as ProgressData
+                for(let key in data) {
+                    pro[key] = data[key]
                 }
-                option.onProgress(e)
-                }
+                pro.loaded = ev.loaded
+                pro.total = ev.total
+                pro.currentFile = pro.file
+                pro.file = file
+                config._singleFileProgress && config._singleFileProgress(pro)
             }
-        */
+        }
+        
+        const data: UploadRequestData = config.data
         const formData = new FormData()
         Object.keys(data).forEach(key => {
             formData.append(key, data[key])
         })
 
-        xhr.onerror = function error(this: XMLHttpRequest, ev: ProgressEvent) {
-            // option.onError(e)
+        // 当网络出现异常（比如不通）的时候发送请求会触发 XMLHttpRequest 对象实例的 error 事件
+        xhr.onerror = function onerror(this: XMLHttpRequest, ev: ProgressEvent) {
+            reject(createError('Network Error', config, null, xhr)) // 获取不到 response
+        }
+
+        // 超时
+        xhr.ontimeout = function ontimeout() {
+            // ECONNABORTED: 网络请求术语，代表网络被终止
+            reject(createError(`Timeout of ${timeout} ms exceeded`, config, 'ECONNABORTED', xhr)) // 获取不到 response
         }
 
         xhr.onload = function onload() {
             const response: UploadResponse = getResponse(xhr)
-            // if (xhr.status < 200 || xhr.status >= 300) {
-            //     return option.onError(getError(action, option, xhr))
-            // }
-            // option.onSuccess(getBody(xhr))
-            resolve(response)
+            if (xhr.status < 200 || xhr.status >= 300) {
+                reject(
+                    createError(
+                        `Request failed with status code ${response.status}`,
+                        config,
+                        null,
+                        xhr,
+                        response
+                    )
+                )
+            }else {
+                resolve(response)
+            }
         }
 
-        xhr.open('POST', action, true)
+        xhr.open('POST', action!, true)
 
         // if (option.withCredentials && 'withCredentials' in xhr) {
         //     xhr.withCredentials = true;
@@ -53,6 +79,15 @@ export default function xhr(config: UploadConfig, data: UploadRequestData): Prom
         //     }
         // }
         xhr.send(formData)
+
+        function abortRequest() {
+            if (config._removeFile && config._removeFile[hash]) {
+                // alert(111)
+                xhr.abort()
+                return true
+            }
+            return false
+        }
     })
 
     function getResponse(xhr: XMLHttpRequest): UploadResponse {
@@ -70,33 +105,3 @@ export default function xhr(config: UploadConfig, data: UploadRequestData): Prom
     }
 }
 
-// function getError(action, option, xhr) {
-//     let msg;
-//     if (xhr.response) {
-//         msg = `${xhr.response.error || xhr.response}`;
-//     } else if (xhr.responseText) {
-//         msg = `${xhr.responseText}`;
-//     } else {
-//         msg = `fail to post ${action} ${xhr.status}`;
-//     }
-
-//     const err = new Error(msg);
-//     err.status = xhr.status;
-//     err.method = 'post';
-//     err.url = action;
-//     return err;
-// }
-
-
-// function getBody(xhr: XMLHttpRequest) {
-//     const text = xhr.responseText || xhr.response;
-//     if (!text) {
-//         return text;
-//     }
-
-//     try {
-//         return JSON.parse(text);
-//     } catch (e) {
-//         return text;
-//     }
-// }

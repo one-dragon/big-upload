@@ -4,22 +4,43 @@
 <head>
     <meta charset="utf-8">
     <title>Simple example</title>
+    <link rel="stylesheet" href="./assets/index.css" />
+    <style>
+        .el-button input[type="file"] {
+            display: none;
+        }
+    </style>
 </head>
 
 <body>
     <div id="app">
-        <p>绑定普通元素</p>
+        <!-- <p>绑定普通元素</p> -->
+        <el-button type="primary" @click="selectFile">
+            选取文件
+            <input type="file" id="selectFile" ref="fileInput" />
+        </el-button>
+        <el-button type="success" @click="submitUpload">上传到服务器</el-button>
+        <br><br>
+        <div v-for="item in fileList">
+            <p>{{ item.name }}</p>
+            <el-progress :text-inside="true" :stroke-width="24" :percentage="item.percentage" status="success"></el-progress>
+            <el-button type="primary" @click="abortUpload(item.hash)">取消上传</el-button>
+        </div>
     </div>
-    <br /><br />
+    <!-- <br /><br />
     <div>
         <p>绑定 file input</p>
-        <input type="file" id="flie-input" />
+        <p>可选择多个文件上传</p>
+        <input type="file" id="file-input" />
+        <button id="btn">点击上传</button>
     </div>
     <br /><br />
     <div>
         <p>绑定 text input</p>
         <input id="text-input" />
-    </div>
+    </div> -->
+    <script src="./assets/vue.js"></script>
+    <script src="./assets/index.js"></script>
     <script src="/__build__/simple.js"></script>
 </body>
 
