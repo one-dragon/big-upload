@@ -81,7 +81,7 @@ name | 说明 | 类型
 `currentHash` | 当前上传的分片文件生成唯一的 md5 值 | string
 
 ```javascript
-// `xx?` 参数是针对分片文件内容，所以在 `onChange`、`onBeforeUpload` 钩子中不会有次参数
+// `xx?` 参数是针对分片文件内容，所以在 `onChange`、`onBeforeUpload` 钩子中不会有此参数
 fileData: {
   name: string,
   size: number,
