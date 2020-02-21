@@ -126,7 +126,38 @@ fileData: {
   total: number,
   percent: number
 }
+```
 
+#### response: []
+name | 说明 | 类型 
+--- | --- | --- 
+`data` | 接口返回的响应数据 | object / any
+`status` | 响应状态码 | number
+`statusText` | 响应状态文字 | string
+`headers` | 响应头 | object
+`config` | 传入的 `config` 配置 | object
+`request` | XMLHttpRequest 请求 | object
 
+```javascript
+// 返回多个分片文件的响应报文集合
+// 分片文件的上传个数是根据上传文件的大小，和设置 `config.chunkSize` 的大小计算而得出结果
+response: [
+  {
+    data: object / any,
+    status: number,
+    statusText: string,
+    headers: object,
+    config: object,
+    request: object
+  },
+  ...
+]
+```
 
+### Methods
+方法 | 说明 | 参数 
+--- | --- | --- 
+`submit` | 上传已选中的文件 | --
+`abort` | 取消上传请求 | (val: 可以是 file 文件，或者是 hash 文件生成唯一的 md5 值)
+`disabled` | 是否禁用 | (val?: 不传值为禁用；传 true 为禁用；传 false 为不禁用)
 
