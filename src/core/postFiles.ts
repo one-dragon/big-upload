@@ -3,42 +3,41 @@ import SparkMD5 from 'spark-md5'
 import { UploadConfig, UploadRequestData, UploadResponse, UploadError, UploadProgressData, UploadParamsData } from '../types'
 import { warn } from '../helpers/error'
 import { isBlob, isFile, deepMerge, isPlainObject } from '../helpers/util'
+import { saveLocalUploadRecord, queyLocalUploadRecord, deleteLocalUploadRecord } from './saveLocalStorage'
 
 
 
 function addProgressComputed(config: UploadConfig) { // 增加分片文件的进度计算
     const data = Object.create(null)
-    config._singleFileProgress = (pro: UploadProgressData, isUploadComplete?: boolean) => {
+
+    config._singleFileProgress = (progressData: UploadProgressData, isUploadComplete?: boolean) => {
         if (isUploadComplete) {
-            delete data[pro.hash]
+            if (data[progressData.hash]) {
+                delete data[progressData.hash]
+            }
             return 
         }
 
-        const { name, index, hash, size, currentSize, total, loaded, file, currentFile } = pro
-        let d: any
-        d = data[hash]
-        if(!d) {
-            d = data[hash] = { size, file, currentFile }
-            d.loadedList = []
-            d.startTime = new Date().getTime()
-        }
-        if (!d.loadedList[index!] && total > 0) { // 上传的total 可能会比当前分片文件 currentSize 体积大
-            d.size += total - currentSize!
-        }
-        d.loadedList[index!] = loaded
+        if (config.onProgress) {
+            const { size, hash, index, currentSize, loaded, total } = progressData
+            let d: any = data[hash]
+            if (!d) {
+                d = data[hash] = { size }
+                d.loadedList = []
+                d.startTime = new Date().getTime()
+            }
+            if (!d.loadedList[index!] && total > 0) { // 上传的total 可能会比当前分片文件 currentSize 体积大
+                d.size += total - currentSize!
+            }
+            d.loadedList[index!] = loaded
 
-        let totalLoaded = d.loadedList.reduce((total: number, next: number) => { return total + next }, 0)
-        let percent = Number((totalLoaded / d.size * 100).toFixed(2))
-        d.percent = percent >= 100 ? 100 : percent
-        pro.percent = d.percent
-        config.onProgress && config.onProgress(pro)
-        // console.log(currentSize + '------' + total )
-        // console.log(pro)
-        // console.log(name + ' --index: ' + index + ' --loaded: ' + loaded + ' --totalLoaded: ' + totalLoaded + ' -- ' + size + ': ')
-        // console.log(d.percent)
-        // if (d.percent === 100) {
-        //     console.log('时间: ' + (new Date().getTime() - d.startTime))
-        // }
+            let totalLoaded = d.loadedList.reduce((total: number, next: number) => { return total + next }, 0)
+            let percent = Number((totalLoaded / d.size * 100).toFixed(2))
+            progressData.percent = percent >= 100 ? 100 : percent
+            config.onProgress(progressData)
+            // console.log(name + ' --index: ' + index + ' --loaded: ' + loaded + ' --totalLoaded: ' + totalLoaded + ' -- ' + size + ': ')
+            // console.log(progressData.percent)
+        }
     }
 }
 
@@ -51,6 +50,10 @@ export default function postFiles(config: UploadConfig) {
         multiple,
         autoUpload,
         httpRequest,
+
+        isLocalRecord,
+        localRecordTime,
+        onLocalRecord,
 
         onChange,
         onBeforeUpload,
@@ -102,6 +105,22 @@ export default function postFiles(config: UploadConfig) {
             }
             config._abortFile[val] = true
         },
+        async remove(val: File | string) {
+            if (fileList) {
+                let hash: any = val
+                if (isFile(val)) {
+                    hash = await getHash(val, val.name || '')
+                }
+
+                fileList = Array.prototype.slice.call(fileList)
+                for(let i = 0; i < fileList.length; i++) {
+                    if (hash === await getHash(fileList[i], fileList[i].name || '')) {
+                        fileList.splice(i, 1)
+                    }
+                    return
+                }
+            }
+        },
         disabled(val?: boolean) {
             if(val === false) {
                 el.removeAttribute('disabled')
@@ -141,7 +160,7 @@ export default function postFiles(config: UploadConfig) {
     }
 
     async function upload(file: File) { // 上传单个文件前，判断钩子函数后上传
-        el.value = ''
+        // el.value = ''
         let fileHash = await getHash(file, file.name)
 
         if (!onBeforeUpload) {
@@ -187,7 +206,8 @@ export default function postFiles(config: UploadConfig) {
             let end = Math.min(size, start + chunkSize!)
             let blob = blobSlice.call(file, start, end)
             let currentHash = await getHash(blob, name)
-            let data: UploadRequestData = {
+
+            const data: UploadRequestData = {
                 name: name,
                 index: i + 1,
                 totalCount: chunkCount,
@@ -201,7 +221,12 @@ export default function postFiles(config: UploadConfig) {
             config.data = deepMerge(config.data, data)
 
             xhrPromiseList.push(
-                post(config, file).catch((err: UploadError) => {
+                post(config, file).then((res) => {
+                    if (isLocalRecord) {
+                        saveLocalUploadRecord(data, config)
+                    }
+                    return res
+                }).catch((err: UploadError) => {
                     onError && onError(err, blob, file)
                     return Promise.reject(err)
                 })
@@ -214,13 +239,36 @@ export default function postFiles(config: UploadConfig) {
             config._singleFileProgress(config.data, true)
             const d: UploadParamsData = await genUploadParamsData(file)
             onSuccess && onSuccess(args[0], d, file)
-            // return args[0]
+            
+            if (isLocalRecord) {
+                deleteLocalUploadRecord(d, config, true)
+            }
+
             return [args[0], d, file]
         })
     }
 
     async function post(config: UploadConfig, file: File): Promise<any> { // 上传单个分片文件前，判断钩子函数后上传
         if (!onBeforeSliceFileUpload) {
+            if (isLocalRecord && queyLocalUploadRecord(config.data, config)) {
+                if (onLocalRecord) {
+                    const d: UploadParamsData = await genUploadParamsData(config.data, file)
+                    const localRecord = onLocalRecord(d)
+                    if (localRecord && localRecord.then) {
+                        return localRecord.then((result: any) => {
+                            if (result) {
+                                return httpRequest(config, file)
+                            }
+                            return progressCall()
+                        })
+                    } else if (localRecord) {
+                        return httpRequest(config, file)
+                    } else {
+                        return progressCall()
+                    }
+                }
+                return progressCall()
+            }
             return httpRequest(config, file)
         }
 

@@ -4,43 +4,29 @@
 <head>
     <meta charset="utf-8">
     <title>Simple example</title>
-    <link rel="stylesheet" href="./assets/index.css" />
-    <style>
-        .el-button input[type="file"] {
-            display: none;
-        }
-    </style>
 </head>
 
 <body>
     <div id="app">
-        <!-- <p>绑定普通元素</p> -->
-        <el-button type="primary" @click="selectFile">
-            选取文件
-            <input type="file" id="selectFile" ref="fileInput" />
-        </el-button>
-        <el-button type="success" @click="submitUpload">上传到服务器</el-button>
-        <br><br>
-        <div v-for="item in fileList">
-            <p>{{ item.name }}</p>
-            <el-progress :text-inside="true" :stroke-width="24" :percentage="item.percentage" status="success"></el-progress>
-            <el-button type="primary" @click="abortUpload(item.hash)">取消上传</el-button>
-        </div>
-    </div>
-    <!-- <br /><br />
-    <div>
-        <p>绑定 file input</p>
-        <p>可选择多个文件上传</p>
+        <h3>原生 file input 绑定:</h3>
         <input type="file" id="file-input" />
-        <button id="btn">点击上传</button>
+
+        <br><br><br>
+
+        <h3>其他元素绑定，创建 file input 插入其中:</h3>
+        <span id="other-element" style="border: 1px #dcdfe6 solid; padding: 15px; display: inline-block;"></span>
+
+        <br><br><br>
+
+        <h3>自闭和标签绑定，创建 file input 插入其后:</h3>
+        <span style="border: 1px #dcdfe6 solid; padding: 15px; display: inline-block;">
+            <input placeholder="文本input绑定" id="text-input" />
+        </span>
+
+        <br><br><br>
+
+        <h3>绑定没定义标签，控制台报错:</h3>
     </div>
-    <br /><br />
-    <div>
-        <p>绑定 text input</p>
-        <input id="text-input" />
-    </div> -->
-    <script src="./assets/vue.js"></script>
-    <script src="./assets/index.js"></script>
     <script src="/__build__/simple.js"></script>
 </body>
 

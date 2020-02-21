@@ -17,7 +17,10 @@ const defaults: UploadConfig = {
     
     timeout: 0,
 
-    httpRequest: xhr
+    httpRequest: xhr,
+
+    isLocalRecord: false,
+    localRecordTime: 15
 }
 
 export default defaults

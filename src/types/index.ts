@@ -14,10 +14,14 @@ export interface UploadConfig {
     timeout?: number
     httpRequest?: any
 
+    isLocalRecord?: boolean
+    localRecordTime?: number
+    onLocalRecord?: (fileData: UploadParamsData) => any
+
     onChange?: (fileData: UploadParamsData[]) => any
     onBeforeUpload?: (fileData: UploadParamsData) => boolean | Promise<any>
     onBeforeSliceFileUpload?: (fileData: UploadParamsData) => boolean | Promise<any>
-    onProgress?: (data: UploadProgressData) => any
+    onProgress?: (progressData: UploadProgressData) => any
     onSuccess?: (response: UploadResponse[], fileData: UploadParamsData, file: File) => any
     onComplete?: (responseList: UploadResponse[][], fileDataList: UploadParamsData[], fileList: File[]) => any
     onError?: (err: UploadError, sliceFile: File | Blob, file: File) => any

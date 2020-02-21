@@ -11,24 +11,24 @@ export default function xhr(config: UploadConfig, file: File): UploadPromise | a
 
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest()
-        const { action, withCredentials, headers, timeout } = config
+        const { action, withCredentials, headers, timeout, name: fieldName } = config
 
         let hash = config.data.hash
         abortRequest()
 
         if (xhr.upload) {
+            const { name, size, hash, totalCount, index, currentSize, currentHash } = config.data
             xhr.upload.onprogress = function onprogress(ev: ProgressEvent<EventTarget>) {
                 if(abortRequest()) return
 
-                let pro = {} as UploadProgressData
-                for(let key in data) {
-                    pro[key] = data[key]
+                if (config._singleFileProgress) {
+                    const progressData = { name, size, hash, totalCount, index, currentSize, currentHash } as UploadProgressData
+                    progressData.loaded = ev.loaded
+                    progressData.total = ev.total
+                    progressData.file = file
+                    progressData.currentFile = config.data[fieldName!]
+                    config._singleFileProgress(progressData)
                 }
-                pro.loaded = ev.loaded
-                pro.total = ev.total
-                pro.currentFile = pro.file
-                pro.file = file
-                config._singleFileProgress && config._singleFileProgress(pro)
             }
         }
         
@@ -87,7 +87,6 @@ export default function xhr(config: UploadConfig, file: File): UploadPromise | a
 
         function abortRequest() {
             if (config._abortFile && config._abortFile[hash]) {
-                // alert(111)
                 xhr.abort()
                 return true
             }
