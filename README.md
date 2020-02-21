@@ -60,8 +60,8 @@ document.querySelector('#btn').onclick = () => {
 `onBeforeUpload` | 上传文件之前的钩子，参数为上传的文件，若返回 false 或者返回 Promise 且被 reject，则停止上传 | function(fileData) | --
 `onBeforeSliceFileUpload` | 上传分片文件之前的钩子，参数为上传的分片文件，若返回 false 或者返回 Promise 且被 reject，则停止上传 | function(fileData) | --
 `onProgress` | 文件上传时的钩子 | function(progressData) | --
-`onSuccess` | 单个文件上传成功时的钩子 | function(response, fileData, file) | --
-`onComplete` | 所有文件上传成功时的钩子 | function(responseList, fileDataList, fileList) | --
+`onSuccess` | 单个文件上传成功时的钩子 | function(response[], fileData, file) | --
+`onComplete` | 所有文件上传成功时的钩子 | function(responseList[][], fileData[], file[]) | --
 `onError` | 分片文件上传失败时的钩子 | function(err, sliceFile, file) | --
 
 
@@ -81,7 +81,17 @@ name | 说明 | 类型
 `currentHash` | 当前上传的分片文件生成唯一的 md5 值 | string
 
 ```javascript
-// `xx?` 参数是针对分片文件内容，所以在 `onChange`、`onBeforeUpload` 钩子中不会有此参数
+import upload from 'big-upload'
+
+upload({
+  el: '#el'
+  action: '/upload',
+  onBeforeUpload(fileData) {
+    console.log(fileData)
+  }
+})
+
+/* `xx?` 参数是针对分片文件内容，所以在 `onChange`、`onBeforeUpload` 钩子中不会有此参数
 fileData: {
   name: string,
   size: number,
@@ -93,6 +103,7 @@ fileData: {
   currentSize?: number,
   currentHash?: string
 }
+*/
 ```
 
 #### progressData: object
@@ -112,7 +123,18 @@ name | 说明 | 类型
 `percent` | 文件的上传进度 | number
 
 ```javascript
-fileData: {
+import upload from 'big-upload'
+
+upload({
+  el: '#el'
+  action: '/upload',
+  onProgress(progressData) {
+    console.log(progressData)
+  }
+})
+
+/*
+progressData: {
   name: string,
   size: number,
   file: file,
@@ -126,6 +148,7 @@ fileData: {
   total: number,
   percent: number
 }
+*/
 ```
 
 #### response: []
@@ -139,8 +162,17 @@ name | 说明 | 类型
 `request` | XMLHttpRequest 请求 | object
 
 ```javascript
-// 返回多个分片文件的响应报文集合
-// 分片文件的上传个数是根据上传文件的大小，和设置 `config.chunkSize` 的大小计算而得出结果
+import upload from 'big-upload'
+
+upload({
+  el: '#el'
+  action: '/upload',
+  onSuccess(response, fileData, file) {
+    console.log(response)
+  }
+})
+
+/* 返回多个分片文件的响应报文集合(分片文件的上传个数是根据上传文件的大小，和设置 `config.chunkSize` 的大小计算而得出结果)
 response: [
   {
     data: object / any,
@@ -152,12 +184,42 @@ response: [
   },
   ...
 ]
+*/
 ```
 
 ### Methods
 方法 | 说明 | 参数 
 --- | --- | --- 
 `submit` | 上传已选中的文件 | --
-`abort` | 取消上传请求 | (val: 可以是 file 文件，或者是 hash 文件生成唯一的 md5 值)
+`abort` | 取消文件上传请求 | (val: 可以是 file 文件，或者是 hash 文件生成唯一的 md5 值)
 `disabled` | 是否禁用 | (val?: 不传值为禁用；传 true 为禁用；传 false 为不禁用)
 
+```javascript
+import upload from 'big-upload'
+
+let fileDataList
+
+const ul = upload({
+  el: '#el',
+  action: '/upload',
+  autoUpload: false,
+  onChange(fileData) {
+    fileDataList = fileData
+  }
+})
+
+document.querySelector('#btnSubmit').onclick = () => {
+  ul.submit()
+}
+
+document.querySelector('#btnAbort').onclick = () => {
+  if(fileDataList && fileDataList.length) {
+    ul.abort(fileDataList[0].hash)
+    fileDataList.shift()
+  }
+}
+
+document.querySelector('#btnDisabled').onclick = () => {
+  ul.disabled()
+}
+```
