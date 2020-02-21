@@ -95,6 +95,38 @@ fileData: {
 }
 ```
 
+#### progressData: object
+name | 说明 | 类型 
+--- | --- | --- 
+`name` | 文件名称 | string
+`size` | 文件大小 | number
+`file` | 上传文件 | file
+`hash` | 文件生成唯一的 md5 值 | string
+`totalCount` | 文件可分片个数 | number
+`index` | 当前上传分片文件的索引值 | number
+`currentFile` | 当前上传的分片文件 | file / blob
+`currentSize` | 当前上传的分片文件大小 | number
+`currentHash` | 当前上传的分片文件生成唯一的 md5 值 | string
+`loaded` | 当前上传的分片文件，已上传的大小 | number
+`total` | 当前上传的分片文件，需要上传的总共大小 | number
+`percent` | 文件的上传进度 | number
+
+```javascript
+fileData: {
+  name: string,
+  size: number,
+  file: file,
+  hash: string,
+  totalCount: number,
+  index: number,
+  currentFile: file / blob,
+  currentSize: number,
+  currentHash: string,
+  loaded: number,
+  total: number,
+  percent: number
+}
+
 
 
 
