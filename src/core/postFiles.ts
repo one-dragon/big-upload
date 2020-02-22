@@ -51,6 +51,8 @@ export default function postFiles(config: UploadConfig) {
         autoUpload,
         httpRequest,
 
+        isAddUp,
+
         isLocalRecord,
         localRecordTime,
         onLocalRecord,
@@ -65,32 +67,49 @@ export default function postFiles(config: UploadConfig) {
 
     addProgressComputed(config)
 
-    let fileList: any
+    let fileList: any[] = []
     el.addEventListener('change', async (ev: Event) => {
         const files: FileList | null = (ev.target as HTMLInputElement).files
         if (!files) return
 
+        const postFiles = Array.prototype.slice.call(files)
+        if (!isAddUp) {
+            fileList = postFiles
+        } else {
+            if (!fileList.length) {
+                fileList = postFiles
+            } else {
+                let map = new Map()
+                fileList.forEach(file => map.set(file.name, file))
+                postFiles.forEach(file => {
+                    if(!map.has(file.name)) {
+                        map.set(file.name, file)
+                    }
+                })
+                fileList = Array.from(map.values())
+                map.clear()
+            }
+        }
+
         if (onChange) {
             const fileDataList: UploadRequestData[] = []
-            for(let i = 0; i < files.length; i++) {
-                let d: UploadParamsData = await genUploadParamsData(Array.prototype.slice.call(files)[i])
+            for (let i = 0; i < fileList.length; i++) {
+                let d: UploadParamsData = await genUploadParamsData(fileList[i])
                 fileDataList.push(d)
             }
             onChange(fileDataList)
         }
 
         if (autoUpload) {
-            uploadFiles(files)
-        }else {
-            fileList = files
+            uploadFiles(fileList)
         }
     })
 
     return {
         submit() {
-            if(fileList) {
+            if(fileList.length) {
                 uploadFiles(fileList)
-                fileList = null
+                // fileList = []
             }else {
                 // alert('没选择文件')
             }
@@ -106,18 +125,17 @@ export default function postFiles(config: UploadConfig) {
             config._abortFile[val] = true
         },
         async remove(val: File | string) {
-            if (fileList) {
+            if (fileList.length) {
                 let hash: any = val
                 if (isFile(val)) {
                     hash = await getHash(val, val.name || '')
                 }
 
-                fileList = Array.prototype.slice.call(fileList)
                 for(let i = 0; i < fileList.length; i++) {
                     if (hash === await getHash(fileList[i], fileList[i].name || '')) {
                         fileList.splice(i, 1)
+                        return
                     }
-                    return
                 }
             }
         },
@@ -130,7 +148,7 @@ export default function postFiles(config: UploadConfig) {
         }
     }
 
-    async function uploadFiles(files: FileList) { // 上传文件前，循环文件进行上传
+    async function uploadFiles(files: FileList | any[]) { // 上传文件前，循环文件进行上传
         let postFiles = Array.prototype.slice.call(files)
         if (!multiple) { postFiles = postFiles.slice(0, 1) }
 
@@ -160,7 +178,9 @@ export default function postFiles(config: UploadConfig) {
     }
 
     async function upload(file: File) { // 上传单个文件前，判断钩子函数后上传
-        // el.value = ''
+        el.value = ''
+        fileList = []
+
         let fileHash = await getHash(file, file.name)
 
         if (!onBeforeUpload) {
@@ -185,7 +205,7 @@ export default function postFiles(config: UploadConfig) {
                     }
                     return sliceFile(processedFile, fileHash)
                 } else {
-                    if (processedFile) {
+                    if (processedFile !== false) {
                         return sliceFile(file, fileHash)
                     }
                 }
@@ -250,18 +270,18 @@ export default function postFiles(config: UploadConfig) {
 
     async function post(config: UploadConfig, file: File): Promise<any> { // 上传单个分片文件前，判断钩子函数后上传
         if (!onBeforeSliceFileUpload) {
-            if (isLocalRecord && queyLocalUploadRecord(config.data, config)) {
-                if (onLocalRecord) {
+            if (isLocalRecord && queyLocalUploadRecord(config.data, config)) { // 设置 开启本地上传记录，并命中本地上传记录
+                if (onLocalRecord) { // 命中本地上传记录前，调用钩子函数
                     const d: UploadParamsData = await genUploadParamsData(config.data, file)
                     const localRecord = onLocalRecord(d)
                     if (localRecord && localRecord.then) {
                         return localRecord.then((result: any) => {
-                            if (result) {
+                            if (result !== false) {
                                 return httpRequest(config, file)
                             }
                             return progressCall()
                         })
-                    } else if (localRecord) {
+                    } else if (localRecord !== false) {
                         return httpRequest(config, file)
                     } else {
                         return progressCall()
@@ -285,9 +305,9 @@ export default function postFiles(config: UploadConfig) {
                     config.data[fieldName!] = processedFile
                     return httpRequest(config, file)
                 } else {
-                    if (processedFile) {
+                    if (processedFile !== false) {
                         return httpRequest(config, file)
-                    }else {
+                    } else {
                         progressCall()
                     }
                 }

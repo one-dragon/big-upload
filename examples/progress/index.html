@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Progress example</title>
+    <link rel="stylesheet" href="./assets/index.css" />
+    <style>
+        .el-button input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app" v-cloak>
+        <br>
+        <div>
+            <el-button type="primary" @click="selectFile">
+                选取文件
+                <input type="file" id="selectFile" ref="fileInput" />
+            </el-button>
+
+            <el-button type="success" @click="submitUpload">上传到服务器</el-button>
+        </div>
+
+        <br>
+        <!-- {{fileList}} -->
+        <ul class="el-upload-list el-upload-list--text" style="width: 400px;">
+            <li class="el-upload-list__item is-success" v-for="item in fileList" :key="item.hash">
+                <a class="el-upload-list__item-name">
+                    <i class="el-icon-document"></i>
+                    <span>{{ item.name }}</span>
+                </a>
+                <label class="el-upload-list__item-status-label" v-show="false">
+                    <i class="el-icon-upload-success el-icon-circle-check"></i>
+                </label>
+                <i class="el-icon-close" @click="abortOrRemove(item)"></i>
+                <el-progress :percentage="item.percentage" v-show="item.percentage"></el-progress>
+            </li>
+        </ul>
+    </div>
+
+    <script src="./assets/vue.js"></script>
+    <script src="./assets/index.js"></script>
+    <script src="/__build__/progress.js"></script>
+</body>
+
+</html>

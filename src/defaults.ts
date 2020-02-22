@@ -20,7 +20,9 @@ const defaults: UploadConfig = {
     httpRequest: xhr,
 
     isLocalRecord: false,
-    localRecordTime: 15
+    localRecordTime: 15,
+
+    isAddUp: false
 }
 
 export default defaults

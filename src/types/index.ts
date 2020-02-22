@@ -14,6 +14,8 @@ export interface UploadConfig {
     timeout?: number
     httpRequest?: any
 
+    isAddUp?: boolean // 是否开启叠加文件
+
     isLocalRecord?: boolean
     localRecordTime?: number
     onLocalRecord?: (fileData: UploadParamsData) => any
