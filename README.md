@@ -69,6 +69,18 @@ document.querySelector('#btn').onclick = () => {
 
 
 
+### requestData: object （上传分片文件时，默认请求入参）
+字段 | 说明 | 类型 
+--- | --- | --- 
+`name` | 文件名称 | string
+`size` | 文件大小 | number
+`hash` | 文件生成唯一的 md5 值 | string
+`totalCount` | 文件可分片个数 | number
+`index` | 当前上传分片文件的索引值 | number
+`file` | 当前上传的分片文件，可通过 `config.name` 设置上传的文件字段名 | file / blob
+`currentSize` | 当前上传的分片文件大小 | number
+`currentHash` | 当前上传的分片文件生成唯一的 md5 值 | string
+
 
 ### 钩子参数说明
 
@@ -156,7 +168,7 @@ progressData: {
 */
 ```
 
-#### response: []
+#### response: object
 name | 说明 | 类型 
 --- | --- | --- 
 `data` | 接口返回的响应数据 | object / any
