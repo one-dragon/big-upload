@@ -57,15 +57,15 @@ document.querySelector('#btn').onclick = () => {
 `timeout` | 设置超时时间 | number | `0`
 `httpRequest` | 覆盖默认的上传行为，可以自定义上传的实现 | function | --
 `onChange` | 选择文件后钩子 | function(fileData[]) | --
-`onBeforeUpload` | 上传文件之前的钩子，参数为上传的文件，若返回 false 或者返回 Promise 且被 reject，则停止上传 | function(fileData) | --
-`onBeforeSliceFileUpload` | 上传分片文件之前的钩子，参数为上传的分片文件，若返回 false 或者返回 Promise 且被 reject，则停止上传 | function(fileData) | --
+`onBeforeUpload` | 上传文件之前的钩子，参数为上传的文件，若返回 false 或者返回 Promise.resolve(false)，则停止上传 | function(fileData) | --
+`onBeforeSliceFileUpload` | 上传分片文件之前的钩子，参数为上传的分片文件，若返回 false 或者返回 Promise.resolve(false)，则停止上传（表示该分片文件已上传成过，无需再上传） | function(fileData) | --
 `onProgress` | 文件上传时的钩子 | function(progressData) | --
-`onSuccess` | 单个文件上传成功时的钩子 | function(response[], fileData, file) | --
-`onComplete` | 所有文件上传成功时的钩子 | function(responseList[][], fileData[], file[]) | --
+`onSuccess` | 单个文件上传成功时的钩子（表示该文件的所有分片文件已全部上传成功） | function(response[], fileData, file) | --
+`onComplete` | 所有文件上传成功时的钩子（表示所有文件的所有分片文件已全部上传成功） | function(responseList[][], fileData[], file[]) | --
 `onError` | 分片文件上传失败时的钩子 | function(err, sliceFile, file) | --
 `isLocalRecord` | 是否开启本地上传记录，开启后每上传完一个分片文件时，会在 `localStorage` 中记录，直到当前文件的所有分片文件全部上传完毕，删除当前记录 | boolean | false
 `localRecordTime` | 开启本地上传记录后，设置保存每个文件的记录时长为多少天 | number | 15 天
-`onLocalRecord` | 开启本地上传记录后，当上传文件的分片文件时，命中本地上传记录，不需要再上传前调用钩子，若返回 false 或者返回 Promise 且被 reject，则停止上传 | function(fileData) | --
+`onLocalRecord` | 开启本地上传记录后，当上传文件的分片文件时，命中本地上传记录，不需要再上传前调用该钩子，若返回 false 或者返回 Promise.resolve(false)，则停止上传（表示该分片文件已上传成过，无需再上传） | function(fileData) | --
 
 
 
