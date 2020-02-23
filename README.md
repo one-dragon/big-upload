@@ -2,6 +2,13 @@
 使用 TypeScript 实现大文件分片上传
 
 
+## 安装
+
+```sh
+ npm i big-upload -S
+```
+
+
 ## 使用
 
 基本使用方法:
